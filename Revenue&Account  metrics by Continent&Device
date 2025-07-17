@@ -1,0 +1,65 @@
+WITH
+-- Calculation of revenue and fraction by devices and continent 
+  revenua_data AS ( 
+  SELECT
+    continent,
+    sum (p.price) AS revenue,
+    sum (p.price) / sum (sum (p.price)) OVER () AS revenue_from_total,
+    sum (CASE
+        WHEN device = 'mobile' THEN p.price
+    END
+      ) AS revenue_from_mobile,
+    sum (CASE
+        WHEN device = 'desktop' THEN p.price
+    END
+      ) AS revenue_from_desktop,
+  FROM
+    data-analytics-mate.DA.order o
+  JOIN
+    data-analytics-mate.DA.product p
+  ON
+    o.item_id = p.item_id
+  JOIN
+    data-analytics-mate.DA.session_params sp
+  ON
+    o.ga_session_id = sp.ga_session_id
+  GROUP BY
+    continent ),
+
+-- Calculation of accounts and session by continent
+  account_data AS (
+  SELECT
+    continent,
+    count (acs.account_id) AS account_cnt,
+    count (CASE
+        WHEN is_verified = 1 THEN 'is_verified'
+    END
+      ) AS verified_cnt,
+    count (sp.ga_session_id) AS session_cnt
+  FROM
+    data-analytics-mate.DA.session_params sp
+  LEFT JOIN
+    data-analytics-mate.DA.account_session acs
+  ON
+    sp.ga_session_id = acs.ga_session_id
+  LEFT JOIN
+    data-analytics-mate.DA.account a
+  ON
+    acs.account_id=a.id
+  GROUP BY
+    continent)
+SELECT
+  revenua_data.continent,
+  revenue,
+  revenue_from_total,
+  revenue_from_mobile,
+  revenue_from_desktop,
+  account_cnt,
+  verified_cnt,
+  session_cnt
+FROM
+  revenua_data
+JOIN
+  account_data
+ON
+  revenua_data.continent = account_data.continent
