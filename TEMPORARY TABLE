@@ -1,0 +1,42 @@
+CREATE TEMPORARY TABLE email_sent_isko AS (
+  SELECT
+    a.id AS id_account,
+    es.id_message AS id_message_sent,
+    eo.id_message AS id_message_open,
+    ev.id_message AS id_message_visit
+  FROM
+    `DA.email_sent` es
+  LEFT JOIN
+    `DA.email_open` eo
+  ON
+    es.id_message = eo.id_message
+  LEFT JOIN
+    `DA.email_visit` ev
+  ON
+    es.id_message = ev.id_message
+  JOIN
+    `DA.account` a
+  ON
+    es.id_account = a.id
+  WHERE
+    a.is_unsubscribed = 0);
+SELECT
+  operating_system,
+  COUNT(DISTINCT id_message_sent) AS sent_msg,
+  COUNT(DISTINCT id_message_open) AS open_msg,
+  COUNT(DISTINCT id_message_visit) AS vist_msg,
+  COUNT(DISTINCT id_message_open) / COUNT(DISTINCT id_message_sent) * 100 AS open_rate,
+  COUNT(DISTINCT id_message_visit) / COUNT(DISTINCT id_message_sent) * 100 AS click_rate,
+  COUNT(DISTINCT id_message_visit) / COUNT(DISTINCT id_message_open) * 100 AS ctor,
+FROM
+  email_sent_isko
+JOIN
+  `DA.account_session` acs
+ON
+  email_sent_isko.id_account = acs.account_id
+JOIN
+  `DA.session_params` sp
+ON
+  acs.ga_session_id = sp.ga_session_id
+GROUP BY
+  operating_system
